@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Rohanika Product Knowledge Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--tx:#1d2733;--mu:#5d6b7a;--ac:#2f6db5;--or:#e0701a;--bd:#d9e1ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13181f;--card:#1c232c;--tx:#e7edf3;--mu:#97a5b4;--ac:#6fa6e6;--bd:#2d3844}}
+:root[data-theme="dark"]{--bg:#13181f;--card:#1c232c;--tx:#e7edf3;--mu:#97a5b4;--ac:#6fa6e6;--bd:#2d3844}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--ac);color:#fff;padding:16px 20px}header h1{margin:0;font-size:20px}header p{margin:2px 0 0;opacity:.9;font-size:13px}
+main{max-width:1000px;margin:0 auto;padding:16px}
+input,button{font:inherit}
+.bar{display:flex;gap:8px}.bar input{flex:1;padding:11px 14px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+button{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer}button.s{background:var(--card);color:var(--ac);border:1px solid var(--bd)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.chip{padding:5px 11px;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer;font-size:13px}.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;cursor:pointer}.card:hover{border-color:var(--ac)}
+.card h3{margin:0 0 4px;font-size:15px}.tag{display:inline-block;font-size:11px;color:var(--mu);margin-right:8px}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-top:14px}
+.panel h2{margin:0 0 4px}.panel h4{margin:14px 0 4px;color:var(--or);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+.panel ul{margin:4px 0 0;padding-left:20px}
+.ai{white-space:pre-wrap;margin-top:10px;border-top:1px dashed var(--bd);padding-top:10px}
+.note{font-size:12px;color:var(--mu);margin-top:8px}.hide{display:none}
+a.btn{background:var(--ac);color:#fff;text-decoration:none;border-radius:10px;padding:10px 16px}.th{display:block;width:100%;height:130px;object-fit:contain;background:#fff;border-radius:8px;margin-bottom:8px}.hero{display:block;max-width:100%;max-height:300px;object-fit:contain;background:#fff;border-radius:10px;margin:0 auto 12px}textarea,.fi{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);margin:3px 0 8px}label{font-size:12px;color:var(--mu)}textarea,.fi{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);margin:3px 0 8px}label{font-size:12px;color:var(--mu)}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+</style></head><body>
+<header><h1 id="ttl">Rohanika Product Knowledge Portal</h1><p>Search any product, brand or category — or just ask a question.</p></header>
+<main>
+<div id="tb" class="panel hide" style="margin:0 0 12px"><b>Editor mode</b> — changes go live for everyone when you click Publish. <span class="row" style="display:inline-flex;margin:0 0 0 8px"><button id="add">+ Add product</button><button id="pub">⬆ Publish to everyone</button><button class="s" id="rl">Reload latest</button><button class="s" id="lo">Log out</button></span><div class="note" id="st">Edit or delete any product, then click Publish.</div></div>
+<div class="bar"><input id="q" placeholder="Search name, model, brand, category… e.g. fabian, ZOLL, NICU, ECG" autocomplete="off"></div>
+<div class="chips" id="cats"></div>
+<div id="ask" class="panel" style="margin-top:0">
+<b>Ask a question (opens ChatGPT)</b>
+<div class="bar" style="margin-top:8px"><input id="aq" placeholder="Which ventilator is suitable for neonates?"><button id="ab">Ask ChatGPT</button></div>
+<div class="note">Try: "Which products do we have for NICU?" · "Difference between fabian Evolution and fabian HFOi" · "Key selling points of M2"</div>
+<div id="aa" class="ai hide"></div></div>
+<div id="detail"></div>
+<h3 id="rh" style="margin:18px 0 8px">All products</h3>
+<div class="grid" id="list"></div>
+<p class="note">Facts shown as "From company profile" come from the Rohanika profile PDF. The ChatGPT buttons open ChatGPT with a ready-made question about the product; verify against brand datasheets before quoting specs or prices to customers (ChatGPT may make mistakes). · <a href="#" id="lg">Editor login</a></p>
+</main>
+<script>
+let P=[],EDIT=false,dirty=false;
+const $=id=>document.getElementById(id);let cat="All",cur=null,aiCache={};
+let cats=[];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function render(){cats=["All",...new Set(P.map(p=>p.c))];if(!cats.includes(cat))cat="All";const q=$("q").value.toLowerCase().trim(),w=q.split(/\s+/).filter(Boolean);
+$("cats").innerHTML=cats.map(c=>`<span class="chip ${c==cat?"on":""}" data-c="${esc(c)}">${esc(c)}</span>`).join("");
+const L=P.map((p,i)=>({p,i})).filter(({p})=>(cat=="All"||p.c==cat)&&w.every(x=>{const h=(p.n+" "+p.b+" "+p.c+" "+p.k+" "+p.d.join(" ")+" "+p.f.join(" ")).toLowerCase(),cx=x.replace(/[^a-z0-9]/g,"");return h.includes(x)||(cx&&h.replace(/[^a-z0-9]/g,"").includes(cx))}));
+if(cur!==null&&!L.some(x=>x.i===cur)){cur=null;$("detail").innerHTML=""}
+$("rh").textContent=L.length+" product"+(L.length==1?"":"s");
+$("list").innerHTML=L.map(({p,i})=>`<div class="card" data-i="${i}"><img class="th" loading="lazy" alt="" src="${p.img}"><h3>${esc(p.n)}</h3><span class="tag">${esc(p.b)}</span><span class="tag">${esc(p.c)}</span><div class="note">${esc(p.d.join(" · "))}</div></div>`).join("")||"<p class='note'>No match. Try the Ask box above.</p>"}
+$("cats").onclick=e=>{if(e.target.dataset.c){cat=e.target.dataset.c;$("q").value="";cur=null;$("detail").innerHTML="";render()}};
+$("q").oninput=()=>{if($("q").value.trim())cat="All";render()};
+$("list").onclick=e=>{const c=e.target.closest(".card");if(c)show(+c.dataset.i)};
+function show(i,ns){cur=i;const p=P[i];
+$("detail").innerHTML=`<div class="panel"><img class="hero" alt="${esc(p.n)}" src="${p.img}"><h2>${esc(p.n)}</h2><span class="tag">Brand: ${esc(p.b)}</span><span class="tag">Category: ${esc(p.c)}</span>
+<h4>From company profile</h4><ul>${p.f.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+<h4>Typical departments</h4><div>${esc(p.d.join(", "))}</div>
+<div class="row">${[["Product overview & key features","Give a product overview, key features, main applications, benefits and selling points, and ideal hospital departments."],["Compare with similar products","Compare it with similar products from other brands and explain when to choose which."],["FAQs & objection handling","Write 5 FAQs and 4 common customer objections with suggested answers, plus installation/service/maintenance notes."]].map(([t,x])=>`<a class="btn" target="_blank" rel="noopener" href="${gpt(p,x)}">${t} ↗</a>`).join("")}</div>`;
+if(EDIT){const r=document.createElement("div");r.className="row";r.innerHTML='<button class="s" id="ed">✏️ Edit this product</button><button class="s" id="dl">🗑 Delete</button>';$("detail").firstChild.appendChild(r);
+$("ed").onclick=()=>form(p);
+$("dl").onclick=()=>{if(confirm("Delete "+p.n+"?")){P.splice(i,1);dirty=true;cur=null;$("detail").innerHTML="";render()}}}
+if(!ns)$("detail").scrollIntoView({behavior:"smooth"});
+}
+function gpt(p,task){const t=`I am a new employee at Rohanika, a medical equipment distributor in India. Explain in simple language the product "${p.n}" by ${p.b} (category: ${p.c}). Facts from our company profile: ${p.f.join("; ")}. ${task} Mark clearly anything you are not sure about.`;return "https://chatgpt.com/?q="+encodeURIComponent(t)}
+$("ab").onclick=()=>{const q=$("aq").value.trim();if(!q)return;window.open("https://chatgpt.com/?q="+encodeURIComponent("I work at Rohanika, a medical equipment distributor in India (brands: ZOLL, Gentherm, Medcaptain, Cardioline, Compumedics, SunTech, Belimed, Neokraft, elMiko, VATHIN, NOXtec). Answer simply: "+q),"_blank","noopener")};
+$("aq").onkeydown=e=>{if(e.key=="Enter")$("ab").click()};
+function readImg(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*k;c.height=im.height*k;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);r(c.toDataURL("image/jpeg",.78))};im.src=fr.result};fr.readAsDataURL(file)})}
+function form(p){const nw=!p;p=p||{n:"",b:"",c:"",k:"",d:[],f:[],img:"",id:"x"+Date.now()};
+$("detail").innerHTML=`<div class="panel"><h2>${nw?"Add product":"Edit product"}</h2>
+<label>Product name / model</label><input class="fi" id="fn" value="${esc(p.n)}">
+<label>Brand</label><input class="fi" id="fb" value="${esc(p.b)}">
+<label>Category</label><input class="fi" id="fc" list="cl" value="${esc(p.c)}"><datalist id="cl">${cats.slice(1).map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
+<label>Departments (comma separated)</label><input class="fi" id="fd" value="${esc(p.d.join(", "))}">
+<label>Search keywords (model numbers, alternative names)</label><input class="fi" id="fk" value="${esc(p.k)}">
+<label>Features / specs (one per line)</label><textarea id="ff" rows="9">${esc(p.f.join("\n"))}</textarea>
+<label>Image (optional – replaces current image)</label><input type="file" id="fi" accept="image/*" class="fi">
+<div class="row"><button id="sv">Save</button><button class="s" id="cn">Cancel</button></div><div class="note" id="fm"></div></div>`;
+$("detail").scrollIntoView({behavior:"smooth"});
+$("cn").onclick=()=>{if(nw)$("detail").innerHTML="";else show(P.indexOf(p),true)};
+$("sv").onclick=async()=>{const n=$("fn").value.trim();if(!n){$("fm").textContent="Name is required.";return}
+const o={id:p.id,n,b:$("fb").value.trim(),c:$("fc").value.trim()||"Other",k:$("fk").value.trim(),d:$("fd").value.split(",").map(x=>x.trim()).filter(Boolean),f:$("ff").value.split("\n").map(x=>x.trim()).filter(Boolean),img:p.img||""};
+const f=$("fi").files[0];if(f)o.img=await readImg(f);
+if(nw)P.push(o);else P[P.indexOf(p)]=o;dirty=true;render();show(P.indexOf(o),true)}}
+const sget=k=>{try{return localStorage.getItem(k)}catch(e){return null}},sset=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},sdel=k=>{try{localStorage.removeItem(k)}catch(e){}};
+let REPO=null,TOKEN=null,SHA=null;
+function guessRepo(){const m=location.hostname.match(/^([^.]+)\.github\.io$/);if(!m)return null;const seg=location.pathname.split("/")[1]||"";return seg&&!seg.includes(".")?m[1]+"/"+seg:m[1]+"/"+m[1]+".github.io"}
+const gh=(path,o={})=>fetch("https://api.github.com/repos/"+REPO+path,{...o,headers:{Authorization:"Bearer "+TOKEN,Accept:"application/vnd.github+json",...(o.headers||{})}});
+const b64=s=>{const u=new TextEncoder().encode(s);let b="";for(let i=0;i<u.length;i+=8192)b+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(b)};
+const say=t=>{$("st").textContent=t};
+function setEdit(on){EDIT=on;$("tb").classList.toggle("hide",!on);if(cur!==null)show(cur,true)}
+async function loadLatest(){const m=await gh("/contents/products.json");if(!m.ok)throw 1;SHA=(await m.json()).sha;const r=await gh("/contents/products.json",{headers:{Accept:"application/vnd.github.raw+json"}});if(!r.ok)throw 2;P=await r.json();dirty=false;cur=null;$("detail").innerHTML="";render()}
+async function login(silent){REPO=sget("rr")||guessRepo();if(!REPO&&!silent)REPO=prompt("Your GitHub repository (example: mycompany/rohanika-portal):");
+TOKEN=sget("rt")||(silent?null:prompt("Paste your Editor access token (see README):"));if(!REPO||!TOKEN)return;
+try{const r=await gh("");const j=await r.json();if(!r.ok)throw 1;if(j.permissions&&j.permissions.push===false)throw 2;sset("rr",REPO);sset("rt",TOKEN);await loadLatest();setEdit(true);say("Logged in. Edit or delete any product, then click Publish.")}
+catch(e){TOKEN=null;sdel("rt");if(!silent)alert("Editor login failed. Check the repository name and token, and that your token has Contents read & write access.")}}
+async function publish(){say("Publishing…");try{const r=await gh("/contents/products.json",{method:"PUT",body:JSON.stringify({message:"Update products via portal",content:b64(JSON.stringify(P)),sha:SHA})});const j=await r.json();
+if(r.status==409||r.status==422){say("Someone else published first. Click “Reload latest”, then redo your change.");return}
+if(r.status==401||r.status==403){say("Not allowed – your token is invalid, expired or has no write access. Log out and log in again.");return}
+if(!r.ok){say("Failed: "+(j.message||r.status));return}
+SHA=j.content.sha;dirty=false;say("Published ✔ Everyone will see it in about 1–2 minutes.")}catch(e){say("Network error. Please try again.")}}
+$("add").onclick=()=>form(null);$("pub").onclick=publish;
+$("rl").onclick=async()=>{if(dirty&&!confirm("Discard your unpublished changes?"))return;try{await loadLatest();say("Reloaded the latest published version.")}catch(e){say("Could not reload.")}};
+$("lo").onclick=()=>{sdel("rt");TOKEN=null;setEdit(false)};
+$("lg").onclick=e=>{e.preventDefault();login(false)};
+addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue=""}});
+fetch("products.json?v="+Date.now()).then(r=>r.json()).then(j=>{P=j;render();if(sget("rt"))login(true)}).catch(()=>{$("list").innerHTML="<p class='note'>Could not load products.json. Open this page through its web address.</p>"});
+</script></body></html>
